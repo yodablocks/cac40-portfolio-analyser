@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAC 40 Portfolio Analysis Report</title>
+    {{ plotly_js | safe }}
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f5f6fa;
+            color: #2d3436;
+            line-height: 1.6;
+        }
+        header {
+            background: linear-gradient(135deg, #003087 0%, #0055b3 100%);
+            color: white;
+            padding: 2rem 3rem;
+        }
+        header h1 { font-size: 1.8rem; font-weight: 700; margin-bottom: 0.25rem; }
+        header p { opacity: 0.85; font-size: 0.95rem; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 2rem 3rem; }
+        .section { margin-bottom: 2.5rem; }
+        .section h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #003087;
+            border-left: 4px solid #003087;
+            padding-left: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .kpi-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.25rem 1.5rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            border-top: 3px solid #0055b3;
+        }
+        .kpi-card .label { font-size: 0.78rem; color: #636e72; text-transform: uppercase; letter-spacing: 0.04em; }
+        .kpi-card .value { font-size: 1.6rem; font-weight: 700; color: #2d3436; margin-top: 0.2rem; }
+        .kpi-card .value.pos, .pos { color: #00b894; }
+        .kpi-card .value.neg, .neg { color: #d63031; }
+        .kpi-card .sub { font-size: 0.8rem; color: #b2bec3; margin-top: 0.1rem; }
+        .chart-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+        }
+        .chart-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.25rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        .chart-card.full { grid-column: 1 / -1; }
+        .flag-list { list-style: none; }
+        .flag-list li {
+            padding: 0.6rem 1rem;
+            border-radius: 5px;
+            margin-bottom: 0.4rem;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .flag-list li.WARNING { background: #fff3cd; border-left: 4px solid #ffc107; }
+        .flag-list li.ERROR { background: #fce4e4; border-left: 4px solid #d63031; }
+        .flag-list li.OK { background: #d4edda; border-left: 4px solid #00b894; }
+        .badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 0.15rem 0.5rem;
+            border-radius: 3px;
+            text-transform: uppercase;
+        }
+        .badge.WARNING { background: #ffc107; color: #212529; }
+        .badge.ERROR { background: #d63031; color: white; }
+        .badge.OK { background: #00b894; color: white; }
+        .overlap-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+        .overlap-table th {
+            background: #003087;
+            color: white;
+            padding: 0.6rem 1rem;
+            text-align: left;
+        }
+        .overlap-table td { padding: 0.55rem 1rem; border-bottom: 1px solid #f0f0f0; }
+        .overlap-table tr:nth-child(even) { background: #f8f9ff; }
+        .sleeve-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+        .sleeve-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.25rem;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        .sleeve-card h3 { font-size: 0.95rem; font-weight: 600; color: #003087; margin-bottom: 0.75rem; }
+        .sleeve-card .stat { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 0.2rem 0; border-bottom: 1px solid #f5f5f5; }
+        .sleeve-card .stat:last-child { border-bottom: none; }
+        .sleeve-card.growth        { border-top: 3px solid #0055b3; }
+        .sleeve-card.defensive     { border-top: 3px solid #00b894; }
+        .sleeve-card.financial     { border-top: 3px solid #e17055; }
+        .sleeve-card.highconviction { border-top: 3px solid #6c5ce7; }
+        .holdings-list { margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.35rem; }
+        .holding-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; }
+        .holding-ticker { width: 4.5rem; font-weight: 600; color: #003087; flex-shrink: 0; }
+        .holding-bar-wrap { flex: 1; background: #f0f3ff; border-radius: 3px; height: 8px; overflow: hidden; }
+        .holding-bar { display: block; height: 100%; border-radius: 3px; }
+        .growth        .holding-bar-wrap { background: #e8f0ff; }
+        .growth        .holding-bar { background: #0055b3; }
+        .defensive     .holding-bar-wrap { background: #e0f7f3; }
+        .defensive     .holding-bar { background: #00b894; }
+        .financial     .holding-bar-wrap { background: #fff0ec; }
+        .financial     .holding-bar { background: #e17055; }
+        .highconviction .holding-bar-wrap { background: #f0eeff; }
+        .highconviction .holding-bar { background: #6c5ce7; }
+        .holding-weight { width: 2.5rem; text-align: right; color: #636e72; flex-shrink: 0; }
+        footer {
+            text-align: center;
+            padding: 1.5rem;
+            font-size: 0.78rem;
+            color: #b2bec3;
+            background: white;
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>CAC 40 Portfolio Analysis Report</h1>
+    <p>French Institutional Equity — Three-Sleeve Lookthrough &nbsp;|&nbsp; Generated {{ generated_at }}</p>
+</header>
+
+<div class="container">
+
+    <!-- KPI Summary -->
+    <div class="section">
+        <h2>Portfolio Summary</h2>
+        <div class="kpi-grid">
+            <!-- Row 1: Performance -->
+            <div class="kpi-card">
+                <div class="label">Annualised Return</div>
+                <div class="value {% if metrics.annualised_return >= 0 %}pos{% else %}neg{% endif %}">{{ "%.2f"|format(metrics.annualised_return * 100) }}%</div>
+                <div class="sub">1-Year Rolling</div>
+            </div>
+            <div class="kpi-card">
+                <div class="label">Annualised Volatility</div>
+                <div class="value">{{ "%.2f"|format(metrics.annualised_volatility * 100) }}%</div>
+                <div class="sub">Realised Std Dev</div>
+            </div>
+            <div class="kpi-card">
+                <div class="label">Sharpe Ratio</div>
+                <div class="value">{{ "%.2f"|format(metrics.sharpe_ratio) }}</div>
+                <div class="sub">RF = 3% (OAT)</div>
+            </div>
+            <div class="kpi-card">
+                <div class="label">Beta vs CAC 40</div>
+                <div class="value">{{ "%.2f"|format(metrics.beta) }}</div>
+                <div class="sub">vs ^FCHI</div>
+            </div>
+            <div class="kpi-card">
+                <div class="label">Tracking Error</div>
+                <div class="value">{{ "%.2f"|format(metrics.tracking_error * 100) }}%</div>
+                <div class="sub">vs ^FCHI (ann.)</div>
+            </div>
+            <!-- Row 2: Risk -->
+            <div class="kpi-card">
+                <div class="label">1-Day VaR (95%)</div>
+                <div class="value">{{ "%.2f"|format(metrics.var_pct * 100) }}%</div>
+                <div class="sub">€{{ "{:,.0f}".format(metrics.var_eur) }} on €1M</div>
+            </div>
+            <div class="kpi-card">
+                <div class="label">Max Drawdown</div>
+                <div class="value neg">{{ "%.2f"|format(metrics.max_drawdown * 100) }}%</div>
+                <div class="sub">Peak-to-Trough</div>
+            </div>
+            <div class="kpi-card">
+                <div class="label">Calmar Ratio</div>
+                <div class="value {% if metrics.calmar_ratio >= 0 %}pos{% else %}neg{% endif %}">{{ "%.2f"|format(metrics.calmar_ratio) }}</div>
+                <div class="sub">Return / Max DD</div>
+            </div>
+            <div class="kpi-card">
+                <div class="label">Information Ratio</div>
+                <div class="value {% if metrics.information_ratio >= 0 %}pos{% else %}neg{% endif %}">{{ "%.2f"|format(metrics.information_ratio) }}</div>
+                <div class="sub">Active Return / TE</div>
+            </div>
+            <div class="kpi-card">
+                <div class="label">HHI Concentration</div>
+                <div class="value">{{ "%.4f"|format(metrics.hhi) }}</div>
+                <div class="sub">{{ metrics.hhi_label }} · {{ portfolio.net_weights | length }} holdings</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sleeve Stats -->
+    <div class="section">
+        <h2>Sleeve Performance</h2>
+        <div class="sleeve-grid">
+            {% set sleeve_class = {"Growth": "growth", "Defensive": "defensive", "Financial & Energy": "financial", "High Conviction": "highconviction"} %}
+            {% for sleeve_name in sleeve_names %}
+            <div class="sleeve-card {{ sleeve_class[sleeve_name] }}">
+                <h3>{{ sleeve_name }}</h3>
+                <div class="stat"><span>Return (ann.)</span><span><b class="{% if metrics.sleeve_returns.get(sleeve_name, 0) >= 0 %}pos{% else %}neg{% endif %}">{{ "%.2f"|format(metrics.sleeve_returns.get(sleeve_name, 0) * 100) }}%</b></span></div>
+                <div class="stat"><span>Volatility (ann.)</span><span>{{ "%.2f"|format(metrics.sleeve_vols.get(sleeve_name, 0) * 100) }}%</span></div>
+                <div class="stat"><span>Holdings</span><span>{{ sleeves[sleeve_name] | length }}</span></div>
+                <div class="holdings-list">
+                    {% for ticker, weight in sleeves[sleeve_name].items() %}
+                    <div class="holding-row">
+                        <span class="holding-ticker">{{ ticker }}</span>
+                        <span class="holding-bar-wrap">
+                            <span class="holding-bar" style="width:{{ (weight * 100)|int }}%"></span>
+                        </span>
+                        <span class="holding-weight">{{ "%.0f"|format(weight * 100) }}%</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Charts row 1 -->
+    <div class="section">
+        <h2>Cumulative Return — Portfolio vs CAC 40</h2>
+        <div class="chart-card full">{{ chart_cumulative | safe }}</div>
+    </div>
+
+    <div class="section">
+        <h2>Drawdown &amp; Rolling Beta vs CAC 40</h2>
+        <div class="chart-row">
+            <div class="chart-card">{{ chart_drawdown | safe }}</div>
+            <div class="chart-card">{{ chart_beta | safe }}</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Rolling 30-Day Volatility by Sleeve</h2>
+        <div class="chart-card full">{{ chart_rolling_vol | safe }}</div>
+    </div>
+
+    <div class="section">
+        <h2>Sector Over/Underweight vs CAC 40 &amp; Correlation Matrix</h2>
+        <div class="chart-row">
+            <div class="chart-card">{{ chart_sector | safe }}</div>
+            <div class="chart-card">{{ chart_corr | safe }}</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>Portfolio Weight by Issuer</h2>
+        <div class="chart-card full">{{ chart_treemap | safe }}</div>
+    </div>
+
+    <!-- ESG Profile -->
+    <div class="section">
+        <h2>ESG Profile</h2>
+        <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr); max-width: 600px;">
+            <div class="kpi-card" style="border-top-color: {{ esg_grade_colours.get(metrics.portfolio_esg_grade, '#0055b3') }};">
+                <div class="label">Portfolio ESG Score</div>
+                <div class="value">{{ "%.1f"|format(metrics.portfolio_esg_score) }}</div>
+                <div class="sub">MSCI Weighted Avg</div>
+            </div>
+            <div class="kpi-card" style="border-top-color: {{ esg_grade_colours.get(metrics.portfolio_esg_grade, '#0055b3') }};">
+                <div class="label">Portfolio ESG Grade</div>
+                <div class="value" style="color: {{ esg_grade_colours.get(metrics.portfolio_esg_grade, '#2d3436') }};">{{ metrics.portfolio_esg_grade }}</div>
+                <div class="sub">MSCI Rating</div>
+            </div>
+            <div class="kpi-card">
+                <div class="label">vs CAC 40 Benchmark</div>
+                <div class="value {% if metrics.esg_vs_benchmark >= 0 %}pos{% else %}neg{% endif %}">
+                    {% if metrics.esg_vs_benchmark >= 0 %}+{% endif %}{{ "%.1f"|format(metrics.esg_vs_benchmark) }}
+                </div>
+                <div class="sub">vs {{ "%.1f"|format(5.8) }} CAC 40 avg</div>
+            </div>
+        </div>
+        <div class="chart-card full" style="margin-top: 1.25rem;">{{ chart_esg | safe }}</div>
+    </div>
+
+    <!-- Validation Flags -->
+    <div class="section">
+        <h2>Data Quality &amp; Validation</h2>
+        <ul class="flag-list">
+            {% if flags %}
+                {% for flag in flags %}
+                <li class="{{ flag.severity }}">
+                    <span class="badge {{ flag.severity }}">{{ flag.severity }}</span>
+                    <span><b>{{ flag.check }}</b>: {{ flag.detail }}</span>
+                </li>
+                {% endfor %}
+            {% else %}
+                <li class="OK"><span class="badge OK">OK</span><span>All validation checks passed.</span></li>
+            {% endif %}
+        </ul>
+    </div>
+
+    <!-- Lookthrough Overlaps -->
+    {% if portfolio.overlapping_issuers %}
+    <div class="section">
+        <h2>Cross-Sleeve Issuer Overlap</h2>
+        <table class="overlap-table">
+            <thead>
+                <tr><th>Ticker</th><th>Sleeves</th><th>Net Consolidated Weight</th></tr>
+            </thead>
+            <tbody>
+                {% for ticker, sleeves_list in portfolio.overlapping_issuers %}
+                <tr>
+                    <td><b>{{ ticker }}</b></td>
+                    <td>{{ sleeves_list | join(', ') }}</td>
+                    <td>{{ "%.2f"|format(portfolio.net_weights[ticker] * 100) }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+</div>
+
+<footer>
+    CAC 40 Portfolio Analyser &mdash; Demonstration purposes only. Data via Yahoo Finance. Not investment advice.
+</footer>
+
+</body>
+</html>
