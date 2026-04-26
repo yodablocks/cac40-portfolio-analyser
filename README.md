@@ -4,6 +4,8 @@ End-to-end institutional portfolio analytics pipeline for a French equity invest
 
 **Result:** Portfolio +20.87% vs CAC 40 +1.58% = +19.29% alpha over 1 year, driven by a concentrated High Conviction sleeve (STM +117%, Legrand +62%, GTT +50%).
 
+**[Live report →](https://yodablocks.github.io/cac40-portfolio-analyser/)**
+
 ## Pipeline
 
 | Stage | Module | Description |
