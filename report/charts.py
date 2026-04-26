@@ -12,7 +12,7 @@ from typing import Dict, Any
 
 import plotly.graph_objects as go
 
-from config import CAC40_ESG_BENCHMARK, ESG_GRADE_COLOURS, ESG_SCORES
+from config import CAC40_ESG_BENCHMARK, COMPANY_NAMES, ESG_GRADE_COLOURS, ESG_SCORES, STRESS_PERIODS
 
 SLEEVE_COLOURS: Dict[str, str] = {
     "Growth": "#0055b3",
@@ -118,11 +118,21 @@ def build_rolling_vol_chart(rolling_vol) -> str:
                 line=dict(width=2, color=SLEEVE_COLOURS.get(sleeve, "#888888")),
             )
         )
+    for period in STRESS_PERIODS:
+        fig.add_vrect(
+            x0=period["start"], x1=period["end"],
+            fillcolor="rgba(214, 48, 49, 0.08)",
+            line_width=0,
+            annotation_text=period["label"],
+            annotation_position="top left",
+            annotation_font_size=10,
+            annotation_font_color="#d63031",
+        )
     fig.update_layout(
         yaxis_title="Volatility (%)",
         xaxis_title="Date",
         legend=dict(orientation="h", y=-0.15),
-        margin=dict(l=50, r=20, t=20, b=60),
+        margin=dict(l=50, r=20, t=30, b=60),
         height=350,
     )
     return fig.to_html(full_html=False, include_plotlyjs=False)
@@ -245,12 +255,14 @@ def build_treemap(net_weights: Dict[str, float], sector_map: Dict[str, str]) -> 
         vals.append(sec_w)
         colours.append(sector_colours[sec])
 
+    customdata = []
     for t, w, sec in zip(tickers, weights, sectors):
         ids.append(t)
         labels.append(f"{t}<br>{w:.1f}%")
         parents.append(sec)
         vals.append(w)
         colours.append(sector_colours[sec])
+        customdata.append(COMPANY_NAMES.get(t, t))
 
     fig = go.Figure(
         go.Treemap(
@@ -261,6 +273,8 @@ def build_treemap(net_weights: Dict[str, float], sector_map: Dict[str, str]) -> 
             marker=dict(colors=colours),
             textfont=dict(size=13),
             branchvalues="total",
+            customdata=[""] * (len(ids) - len(tickers)) + customdata,
+            hovertemplate="<b>%{label}</b><br>%{customdata}<br>Weight: %{value:.1f}%<extra></extra>",
         )
     )
     fig.update_layout(margin=dict(l=10, r=10, t=10, b=10), height=480)

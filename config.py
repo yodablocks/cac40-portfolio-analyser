@@ -112,6 +112,33 @@ ESG_GRADE_COLOURS: Dict[str, str] = {
     "CCC": "#6c5ce7",
 }
 
+COMPANY_NAMES: Dict[str, str] = {
+    "MC.PA":    "LVMH Moët Hennessy",
+    "AIR.PA":   "Airbus Group",
+    "SU.PA":    "Schneider Electric",
+    "SAF.PA":   "Safran",
+    "KER.PA":   "Kering",
+    "SAN.PA":   "Sanofi",
+    "OR.PA":    "L'Oréal",
+    "EL.PA":    "EssilorLuxottica",
+    "AI.PA":    "Air Liquide",
+    "SW.PA":    "Sodexo",
+    "BNP.PA":   "BNP Paribas",
+    "TTE.PA":   "TotalEnergies",
+    "CS.PA":    "AXA SA",
+    "ACA.PA":   "Crédit Agricole",
+    "STMPA.PA": "STMicroelectronics",
+    "LR.PA":    "Legrand",
+    "GTT.PA":   "GTT (Gaztransport & Technigaz)",
+}
+
+# Known volatility events within the 1-year lookback window (Apr 2025 – Apr 2026)
+STRESS_PERIODS = [
+    {"start": "2025-08-01", "end": "2025-08-15", "label": "Global sell-off (Aug 2025)"},
+    {"start": "2025-10-01", "end": "2025-10-20", "label": "Rate anxiety (Oct 2025)"},
+    {"start": "2026-01-13", "end": "2026-01-27", "label": "Trump tariff shock (Jan 2026)"},
+]
+
 RISK_FREE_RATE: float = 0.03  # French OAT proxy
 PORTFOLIO_VALUE_EUR: float = 1_000_000.0
 VAR_CONFIDENCE: float = 0.95
