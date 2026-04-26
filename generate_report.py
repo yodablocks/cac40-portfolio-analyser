@@ -27,6 +27,7 @@ from report.charts import (
     build_esg_chart,
     build_rolling_vol_chart,
     build_sector_chart,
+    build_sleeve_cumulative_chart,
     build_treemap,
 )
 
@@ -91,6 +92,7 @@ def main() -> None:
         sleeve_names=list(SLEEVES.keys()),
         plotly_js=PLOTLY_CDN,
         chart_cumulative=build_cumulative_return_chart(metrics.portfolio_returns, metrics.benchmark_returns),
+        chart_sleeve_cumulative=build_sleeve_cumulative_chart(metrics.sleeve_cumulative_returns, metrics.benchmark_returns),
         chart_drawdown=build_drawdown_chart(metrics.drawdown_series),
         chart_beta=build_beta_chart(metrics.rolling_beta),
         chart_rolling_vol=build_rolling_vol_chart(metrics.rolling_vol),

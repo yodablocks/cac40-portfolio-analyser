@@ -59,6 +59,37 @@ def build_cumulative_return_chart(portfolio_returns, benchmark_returns) -> str:
     return fig.to_html(full_html=False, include_plotlyjs=False)
 
 
+def build_sleeve_cumulative_chart(sleeve_cum, benchmark_returns) -> str:
+    """Render cumulative return per sleeve + CAC 40 benchmark, all indexed to 100."""
+    bm_cum = (1 + benchmark_returns).cumprod() * 100
+
+    fig = go.Figure()
+    for sleeve in sleeve_cum.columns:
+        fig.add_trace(go.Scatter(
+            x=sleeve_cum.index.astype(str).tolist(),
+            y=sleeve_cum[sleeve].round(2).tolist(),
+            mode="lines",
+            name=sleeve,
+            line=dict(width=2, color=SLEEVE_COLOURS.get(sleeve, "#888888")),
+        ))
+    fig.add_trace(go.Scatter(
+        x=bm_cum.index.astype(str).tolist(),
+        y=bm_cum.round(2).tolist(),
+        mode="lines",
+        name="CAC 40 (^FCHI)",
+        line=dict(color="#636e72", width=1.5, dash="dash"),
+    ))
+    fig.add_hline(y=100, line_width=1, line_color="#b2bec3")
+    fig.update_layout(
+        yaxis_title="Indexed Return (100 = start)",
+        xaxis_title="Date",
+        legend=dict(orientation="h", y=-0.15),
+        margin=dict(l=60, r=20, t=20, b=60),
+        height=350,
+    )
+    return fig.to_html(full_html=False, include_plotlyjs=False)
+
+
 def build_beta_chart(rolling_beta) -> str:
     """Render 30-day rolling beta vs CAC 40 with a β=1 reference line."""
     fig = go.Figure(

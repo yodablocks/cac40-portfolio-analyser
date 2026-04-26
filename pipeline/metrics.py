@@ -50,6 +50,7 @@ class PortfolioMetrics:
     correlation_matrix: pd.DataFrame
     sleeve_returns: Dict[str, float] = field(default_factory=dict)
     sleeve_vols: Dict[str, float] = field(default_factory=dict)
+    sleeve_cumulative_returns: pd.DataFrame = field(default_factory=pd.DataFrame)
     esg_scores: Dict[str, float] = field(default_factory=dict)
     portfolio_esg_score: float = 0.0
     portfolio_esg_grade: str = ""
@@ -87,7 +88,7 @@ def compute_metrics(
     sector_over_under = _sector_over_under(portfolio.sector_weights)
     corr_matrix = _correlation_matrix(returns, portfolio.net_weights)
 
-    sleeve_returns, sleeve_vols = _sleeve_stats(returns)
+    sleeve_returns, sleeve_vols, sleeve_cum = _sleeve_stats(returns)
     esg_scores, portfolio_esg_score, portfolio_esg_grade, esg_vs_benchmark = _esg_metrics(portfolio.net_weights)
 
     return PortfolioMetrics(
@@ -112,6 +113,7 @@ def compute_metrics(
         correlation_matrix=corr_matrix,
         sleeve_returns=sleeve_returns,
         sleeve_vols=sleeve_vols,
+        sleeve_cumulative_returns=sleeve_cum,
         esg_scores=esg_scores,
         portfolio_esg_score=portfolio_esg_score,
         portfolio_esg_grade=portfolio_esg_grade,
@@ -302,10 +304,13 @@ def _esg_metrics(
     return weighted, portfolio_score, grade, portfolio_score - CAC40_ESG_BENCHMARK
 
 
-def _sleeve_stats(returns: pd.DataFrame) -> Tuple[Dict[str, float], Dict[str, float]]:
-    """Compute annualised return and vol for each sleeve (equal-weighted)."""
+def _sleeve_stats(
+    returns: pd.DataFrame,
+) -> Tuple[Dict[str, float], Dict[str, float], pd.DataFrame]:
+    """Compute annualised return, vol, and cumulative return series for each sleeve."""
     sleeve_returns: Dict[str, float] = {}
     sleeve_vols: Dict[str, float] = {}
+    cum_series: Dict[str, pd.Series] = {}
     for sleeve_name, holdings in SLEEVES.items():
         available = [t for t in holdings if t in returns.columns]
         if not available:
@@ -313,4 +318,5 @@ def _sleeve_stats(returns: pd.DataFrame) -> Tuple[Dict[str, float], Dict[str, fl
         ret = returns[available].mean(axis=1)
         sleeve_returns[sleeve_name] = float(ret.mean() * TRADING_DAYS)
         sleeve_vols[sleeve_name] = float(ret.std() * np.sqrt(TRADING_DAYS))
-    return sleeve_returns, sleeve_vols
+        cum_series[sleeve_name] = (1 + ret).cumprod() * 100
+    return sleeve_returns, sleeve_vols, pd.DataFrame(cum_series).dropna()
