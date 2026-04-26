@@ -32,7 +32,7 @@
         }
         .kpi-grid {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(6, 1fr);
             gap: 1rem;
             margin-bottom: 1.5rem;
         }
@@ -174,11 +174,21 @@
                 <div class="value">{{ "%.2f"|format(metrics.tracking_error * 100) }}%</div>
                 <div class="sub">vs ^FCHI (ann.)</div>
             </div>
+            <div class="kpi-card">
+                <div class="label">Benchmark Return</div>
+                <div class="value {% if metrics.benchmark_annualised_return >= 0 %}pos{% else %}neg{% endif %}">{{ "%.2f"|format(metrics.benchmark_annualised_return * 100) }}%</div>
+                <div class="sub">CAC 40 (^FCHI)</div>
+            </div>
             <!-- Row 2: Risk -->
             <div class="kpi-card">
                 <div class="label">1-Day VaR (95%)</div>
                 <div class="value">{{ "%.2f"|format(metrics.var_pct * 100) }}%</div>
                 <div class="sub">€{{ "{:,.0f}".format(metrics.var_eur) }} on €1M</div>
+            </div>
+            <div class="kpi-card">
+                <div class="label">1-Day CVaR (95%)</div>
+                <div class="value neg">{{ "%.2f"|format(metrics.cvar_pct * 100) }}%</div>
+                <div class="sub">€{{ "{:,.0f}".format(metrics.cvar_eur) }} on €1M</div>
             </div>
             <div class="kpi-card">
                 <div class="label">Max Drawdown</div>

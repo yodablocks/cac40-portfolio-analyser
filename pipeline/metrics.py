@@ -36,6 +36,9 @@ class PortfolioMetrics:
     hhi_label: str
     var_pct: float
     var_eur: float
+    cvar_pct: float
+    cvar_eur: float
+    benchmark_annualised_return: float
     max_drawdown: float
     drawdown_series: pd.Series
     beta: float
@@ -79,6 +82,8 @@ def compute_metrics(
     sharpe = _sharpe_ratio(ann_ret, ann_vol)
     hhi, hhi_label = _hhi(portfolio.net_weights)
     var_pct, var_eur = _historical_var(portfolio_returns)
+    cvar_pct, cvar_eur = _historical_cvar(portfolio_returns)
+    benchmark_ann_ret = _annualised_return(benchmark_returns) if not benchmark_returns.empty else 0.0
     max_dd, drawdown_series = _max_drawdown(portfolio_returns)
     beta, rolling_beta = _beta(portfolio_returns, returns)
     calmar = _calmar_ratio(ann_ret, max_dd)
@@ -99,6 +104,9 @@ def compute_metrics(
         hhi_label=hhi_label,
         var_pct=var_pct,
         var_eur=var_eur,
+        cvar_pct=cvar_pct,
+        cvar_eur=cvar_eur,
+        benchmark_annualised_return=benchmark_ann_ret,
         max_drawdown=max_dd,
         drawdown_series=drawdown_series,
         beta=beta,
@@ -174,6 +182,20 @@ def _historical_var(daily_returns: pd.Series) -> Tuple[float, float]:
     var_pct = float(-np.percentile(clean, (1 - VAR_CONFIDENCE) * 100))
     var_eur = var_pct * PORTFOLIO_VALUE_EUR
     return var_pct, var_eur
+
+
+def _historical_cvar(daily_returns: pd.Series) -> Tuple[float, float]:
+    """Compute 1-day historical CVaR (Expected Shortfall) at 95% confidence.
+
+    Returns the mean loss on days that breach VaR — always >= VaR.
+    """
+    clean = daily_returns.dropna()
+    if len(clean) == 0:
+        return 0.0, 0.0
+    threshold = np.percentile(clean, (1 - VAR_CONFIDENCE) * 100)
+    tail = clean[clean <= threshold]
+    cvar_pct = float(-tail.mean()) if len(tail) > 0 else 0.0
+    return cvar_pct, cvar_pct * PORTFOLIO_VALUE_EUR
 
 
 def _beta(
