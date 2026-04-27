@@ -62,6 +62,10 @@ def main() -> None:
     """Run the full pipeline and generate the HTML report."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--cache", action="store_true", help="Reuse cached price data")
+    parser.add_argument("--ai-summary", action="store_true", help="Generate LLM portfolio narrative")
+    parser.add_argument(
+        "--backend", choices=["local", "claude"], default="local", help="LLM backend"
+    )
     args = parser.parse_args()
 
     logger.info("=== CAC 40 Portfolio Analyser ===")
@@ -78,6 +82,21 @@ def main() -> None:
 
     logger.info("Step 4/4: Computing metrics")
     metrics = compute_metrics(prices, portfolio)
+
+    ai_summary = ""
+    narrative_backend = ""
+    narrative_timestamp = ""
+
+    if args.ai_summary:
+        logger.info("Generating AI narrative (backend: %s)", args.backend)
+        from report.ai_summary import generate_summary
+        ai_summary = generate_summary(metrics, backend=args.backend)
+        narrative_backend = args.backend
+        narrative_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+        if ai_summary:
+            logger.info("Narrative generated (%d chars)", len(ai_summary))
+        else:
+            logger.warning("Narrative generation failed or returned empty")
 
     logger.info("Rendering report")
     env = Environment(loader=FileSystemLoader(str(TEMPLATE_DIR)))
@@ -101,6 +120,9 @@ def main() -> None:
         chart_treemap=build_treemap(portfolio.net_weights, SECTOR_MAP),
         chart_esg=build_esg_chart(portfolio.net_weights),
         esg_grade_colours=ESG_GRADE_COLOURS,
+        ai_summary=ai_summary,
+        narrative_backend=narrative_backend,
+        narrative_timestamp=narrative_timestamp,
     )
 
     REPORT_PATH.write_text(html, encoding="utf-8")
